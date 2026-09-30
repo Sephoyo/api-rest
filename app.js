@@ -1,10 +1,17 @@
 const express = require('express');
 const app = express();
 const Database = require('better-sqlite3');
-const port = 3000;
+const jwt = require('jsonwebtoken');
+//middleware authentification
+const createAuthenticateToken = require('./middleware/login.middleware');
 
 app.use(express.json());// for parsing application/json
 app.use(express.urlencoded({ extended: true }));// for parsing application/x-www-form-urlencoded
+
+//Normalement secret dans un .env
+const SECRET_KEY = 'cest_une_cle';
+const port = 3000;
+const authenticateToken = createAuthenticateToken(SECRET_KEY);
 
 
 const db = new Database('local.db');
@@ -30,9 +37,39 @@ db.exec(`
     ('Gourde inox', 'Gourde réutilisable de 750 ml', 1999, 'Maison');
 `);
 
+//Création de la table utilisateur
+db.exec(`
+  CREATE TABLE IF NOT EXISTS USERS (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nom TEXT NOT NULL,
+    email TEXT NOT NULL,
+    password INTEGER NOT NULL
+  )
+`);
+
+db.exec(`
+  INSERT INTO USERS (nom, email, password) VALUES
+    ('Joe', 'joe@doe.fr','password123');
+`);
+
+
 app.get('/', (req, res) => {
     res.send(1);
 });
+
+//Login de l'utilisateur
+app.post('/login', (req, res) => {
+    const { email, password } = req.body;
+    const user = db.prepare('SELECT * FROM USERS WHERE email=? AND password=?').get(email, password);
+
+    if (!user) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    const token = jwt.sign({ username: user.nom }, SECRET_KEY, { expiresIn: '5m' });
+    return res.json({ token });
+});
+
 
 //Get all products
 app.get('/products/', (req, res) => {
@@ -47,32 +84,34 @@ app.get('/products/:id', (req, res) => {
 })
 
 //Add product
-app.post('/products/', (req, res) => {
+app.post('/products/', authenticateToken, (req, res) => {
+    const { nom, desc, price, categorie } = req.body;
     const stmt = db.prepare("INSERT into PRODUCT (nom,desc,price,categorie) VALUES (@nom,@desc,@price,@categorie)")
     const result = stmt.run({
-        nom: req.body.nom,
-        desc: req.body.desc,
-        price: req.body.price,
-        categorie: req.body.categorie,
+        nom: nom,
+        desc: desc,
+        price: price,
+        categorie: categorie,
     });
     res.status(201).send()
 })
 
 //Patch product
-app.patch('/products/:id', (req,res)=>{
+app.patch('/products/:id', authenticateToken, (req,res)=>{
+    const { nom, desc, price, categorie } = req.body;
     const stmt = db.prepare("UPDATE PRODUCT SET nom=@nom, desc=@desc, price=@price, categorie=@categorie WHERE id=@id")
     const result = stmt.run({
-        nom: req.body.nom,
-        desc: req.body.desc,
-        price: req.body.price,
-        categorie: req.body.categorie,
+        nom: nom,
+        desc: desc,
+        price: price,
+        categorie: categorie,
         id: req.params.id,
     });
     res.send(result)
 })
 
 //Delete product
-app.delete('/products/:id', (req,res)=>{
+app.delete('/products/:id', authenticateToken, (req,res)=>{
     const stmt = db.prepare("DELETE FROM PRODUCT WHERE id=?")
     const result = stmt.run(req.params.id)
     res.send(result)
