@@ -16,7 +16,7 @@ const authenticateToken = createAuthenticateToken(SECRET_KEY);
 
 const db = new Database('local.db');
 
-// Création d'une table d'exemple au démarrage
+//Création des produits fictifs
 db.exec(`
   CREATE TABLE IF NOT EXISTS PRODUCT (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -54,7 +54,7 @@ db.exec(`
 
 
 app.get('/', (req, res) => {
-    res.send(1);
+    res.status(200).json({ message: 'API disponible' });
 });
 
 //Login user
@@ -67,25 +67,35 @@ app.post('/login', (req, res) => {
     }
 
     const token = jwt.sign({ username: user.nom }, SECRET_KEY, { expiresIn: '5m' });
-    return res.json({ token });
+    return res.status(200).json({ token });
 });
 
 
 //Get all products
 app.get('/products/', (req, res) => {
-    const stmt = db.prepare('SELECT * FROM PRODUCT');
-    res.send(stmt.all())
-})
+    const products = db.prepare('SELECT * FROM PRODUCT').all();
+    return res.status(200).json(products);
+});
 
-//Get on product by id
+//Get one product by id
 app.get('/products/:id', (req, res) => {
-    const stmt = db.prepare('SELECT * FROM PRODUCT WHERE id=?').get(req.params.id)
-    res.send(stmt)
-})
+    const product = db.prepare('SELECT * FROM PRODUCT WHERE id=?').get(req.params.id);
+
+    if (!product) {
+        return res.status(404).json({ message: 'Product not found' });
+    }
+
+    return res.status(200).json(product);
+});
 
 //Add product
 app.post('/products/', authenticateToken, (req, res) => {
     const { nom, desc, price, categorie } = req.body;
+
+    if (!nom || !desc || !price || !categorie) {
+        return res.status(400).json({ message: 'Missing required fields' });
+    }
+
     const stmt = db.prepare("INSERT into PRODUCT (nom,desc,price,categorie) VALUES (@nom,@desc,@price,@categorie)")
     const result = stmt.run({
         nom: nom,
@@ -93,29 +103,55 @@ app.post('/products/', authenticateToken, (req, res) => {
         price: price,
         categorie: categorie,
     });
-    res.status(201).send()
-})
+
+    return res.status(201).json({
+        id: result.lastInsertRowid,
+        message: 'Product created successfully'
+    });
+});
 
 //Patch product
 app.patch('/products/:id', authenticateToken, (req,res)=>{
+    const existingProduct = db.prepare('SELECT * FROM PRODUCT WHERE id=?').get(req.params.id);
+
+    if (!existingProduct) {
+        return res.status(404).json({ message: 'Product not found' });
+    }
+
     const { nom, desc, price, categorie } = req.body;
+    const updatedProduct = {
+        nom: nom ?? existingProduct.nom,
+        desc: desc ?? existingProduct.desc,
+        price: price ?? existingProduct.price,
+        categorie: categorie ?? existingProduct.categorie,
+        id: Number(req.params.id),
+    };
+
     const stmt = db.prepare("UPDATE PRODUCT SET nom=@nom, desc=@desc, price=@price, categorie=@categorie WHERE id=@id")
-    const result = stmt.run({
-        nom: nom,
-        desc: desc,
-        price: price,
-        categorie: categorie,
-        id: req.params.id,
+    stmt.run(updatedProduct);
+
+    return res.status(200).json({
+        message: 'Product updated successfully',
+        product: updatedProduct
     });
-    res.send(result)
-})
+});
 
 //Delete product
 app.delete('/products/:id', authenticateToken, (req,res)=>{
+    const existingProduct = db.prepare('SELECT * FROM PRODUCT WHERE id=?').get(req.params.id);
+
+    if (!existingProduct) {
+        return res.status(404).json({ message: 'Product not found' });
+    }
+
     const stmt = db.prepare("DELETE FROM PRODUCT WHERE id=?")
-    const result = stmt.run(req.params.id)
-    res.send(result)
-})
+    stmt.run(req.params.id)
+
+    return res.status(200).json({
+        message: 'Product deleted successfully',
+        id: Number(req.params.id)
+    });
+});
 
 app.listen(port, () => {
     console.log(`App listening on port ${port}`);
