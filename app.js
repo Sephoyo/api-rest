@@ -57,7 +57,7 @@ app.get('/', (req, res) => {
     res.send(1);
 });
 
-//Login de l'utilisateur
+//Login user
 app.post('/login', (req, res) => {
     const { email, password } = req.body;
     const user = db.prepare('SELECT * FROM USERS WHERE email=? AND password=?').get(email, password);

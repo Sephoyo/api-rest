@@ -15,7 +15,9 @@ http:
           "price": 9999,
           "categorie": "DEBUG"
         }
-  auth: inherit
+  auth:
+    type: bearer
+    token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6IkpvZSIsImlhdCI6MTc5MDc3ODA0NiwiZXhwIjoxNzkwNzc4MzQ2fQ.wVB2Ct9O-NMWnXiJVOj3afEDNcM_knLtHapmuRIBxY4
 
 settings:
   encodeUrl: true

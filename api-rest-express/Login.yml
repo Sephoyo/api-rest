@@ -1,0 +1,23 @@
+info:
+  name: Login
+  type: http
+  seq: 6
+
+http:
+  method: POST
+  url: http://localhost:3000/login/
+  body:
+    type: json
+    data: |-
+      {
+          "email" : "joe@doe.fr",
+          "password" : "password123"
+        }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
