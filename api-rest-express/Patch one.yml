@@ -1,0 +1,25 @@
+info:
+  name: Patch one
+  type: http
+  seq: 4
+
+http:
+  method: PATCH
+  url: http://localhost:3000/products/1
+  body:
+    type: json
+    data: |-
+      {
+        "nom": "Clavier acoustique",
+        "desc": "Clavier mécanique sans fil",
+        "price": 7999,
+        "categorie": "Informatique"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

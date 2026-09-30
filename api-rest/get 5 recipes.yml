@@ -1,0 +1,26 @@
+info:
+  name: get 5 recipes
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: https://dummyjson.com/recipes?limit=5&sortBy=rating&order=desc
+  params:
+    - name: limit
+      value: "5"
+      type: query
+    - name: sortBy
+      value: rating
+      type: query
+    - name: order
+      value: desc
+      type: query
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
