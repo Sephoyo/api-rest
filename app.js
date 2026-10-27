@@ -49,7 +49,7 @@ db.exec(`
 
 db.exec(`
   INSERT INTO USERS (nom, email, password) VALUES
-    ('Joe', 'joe@doe.fr','password123');
+    ('John', 'john@doe.fr','password123');
 `);
 
 
