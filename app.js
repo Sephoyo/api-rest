@@ -1,16 +1,22 @@
+require('dotenv').config();
 const express = require('express');
 const app = express();
 const Database = require('better-sqlite3');
-const jwt = require('jsonwebtoken');
 //middleware authentification
 const createAuthenticateToken = require('./middleware/login.middleware');
+//routes
+const UserRoute = require('./routes/users.routes');
+const ProductRoute = require('./routes/products.routes');
 
 app.use(express.json());// for parsing application/json
 app.use(express.urlencoded({ extended: true }));// for parsing application/x-www-form-urlencoded
 
-//Normalement secret dans un .env
-const SECRET_KEY = 'cest_une_cle';
-const port = 3000;
+//Secret récupéré depuis le .env
+const SECRET_KEY = process.env.SECRET_KEY;
+if (!SECRET_KEY) {
+    throw new Error('SECRET_KEY manquante : copier .env.example en .env et la renseigner');
+}
+const port = process.env.PORT || 3000;
 const authenticateToken = createAuthenticateToken(SECRET_KEY);
 
 
@@ -24,7 +30,6 @@ db.exec(`
     desc TEXT NOT NULL,
     price INTEGER NOT NULL,
     categorie TEXT NOT NULL
-
   )
 `);
 
@@ -49,7 +54,7 @@ db.exec(`
   )
 `);
 
-if (db.prepare("SELECT COUNT(*) AS n FROM PRODUCT").get().n === 0){
+if (db.prepare("SELECT COUNT(*) AS n FROM USERS").get().n === 0){
     db.exec(`
     INSERT INTO USERS (nom, email, password) VALUES
         ('John', 'john@doe.fr','password123');
@@ -61,101 +66,8 @@ app.get('/', (req, res) => {
     res.status(200).json({ message: 'API disponible' });
 });
 
-//Login user
-app.post('/login', (req, res) => {
-    const { email, password } = req.body;
-    const user = db.prepare('SELECT * FROM USERS WHERE email=? AND password=?').get(email, password);
-
-    if (!user) {
-        return res.status(401).json({ message: 'Invalid credentials' });
-    }
-
-    const token = jwt.sign({ username: user.nom }, SECRET_KEY, { expiresIn: '5m' });
-    return res.status(200).json({ token });
-});
-
-
-//Get all products
-app.get('/products/', (req, res) => {
-    const products = db.prepare('SELECT * FROM PRODUCT').all();
-    return res.status(200).json(products);
-});
-
-//Get one product by id
-app.get('/products/:id', (req, res) => {
-    const product = db.prepare('SELECT * FROM PRODUCT WHERE id=?').get(req.params.id);
-
-    if (!product) {
-        return res.status(404).json({ message: 'Product not found' });
-    }
-
-    return res.status(200).json(product);
-});
-
-//Add product
-app.post('/products/', authenticateToken, (req, res) => {
-    const { nom, desc, price, categorie } = req.body;
-
-    if (!nom || !desc || !price || !categorie) {
-        return res.status(400).json({ message: 'Missing required fields' });
-    }
-
-    const stmt = db.prepare("INSERT into PRODUCT (nom,desc,price,categorie) VALUES (@nom,@desc,@price,@categorie)")
-    const result = stmt.run({
-        nom: nom,
-        desc: desc,
-        price: price,
-        categorie: categorie,
-    });
-
-    return res.status(201).json({
-        id: result.lastInsertRowid,
-        message: 'Product created successfully'
-    });
-});
-
-//Patch product
-app.patch('/products/:id', authenticateToken, (req,res)=>{
-    const existingProduct = db.prepare('SELECT * FROM PRODUCT WHERE id=?').get(req.params.id);
-
-    if (!existingProduct) {
-        return res.status(404).json({ message: 'Product not found' });
-    }
-
-    const { nom, desc, price, categorie } = req.body;
-    const updatedProduct = {
-        nom: nom ?? existingProduct.nom,
-        desc: desc ?? existingProduct.desc,
-        price: price ?? existingProduct.price,
-        categorie: categorie ?? existingProduct.categorie,
-        id: Number(req.params.id),
-    };
-
-    const stmt = db.prepare("UPDATE PRODUCT SET nom=@nom, desc=@desc, price=@price, categorie=@categorie WHERE id=@id")
-    stmt.run(updatedProduct);
-
-    return res.status(200).json({
-        message: 'Product updated successfully',
-        product: updatedProduct
-    });
-});
-
-//Delete product
-app.delete('/products/:id', authenticateToken, (req,res)=>{
-    const existingProduct = db.prepare('SELECT * FROM PRODUCT WHERE id=?').get(req.params.id);
-
-    if (!existingProduct) {
-        return res.status(404).json({ message: 'Product not found' });
-    }
-
-    const stmt = db.prepare("DELETE FROM PRODUCT WHERE id=?")
-    stmt.run(req.params.id)
-
-    return res.status(200).json({
-        message: 'Product deleted successfully',
-        id: Number(req.params.id)
-    });
-});
+app.use('/', UserRoute(db, SECRET_KEY));
+app.use('/products', ProductRoute(db, authenticateToken));
 
 app.listen(port, () => {
     console.log(`App listening on port ${port}`);
