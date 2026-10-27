@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 
 const authenticateToken = (secretKey) => (req, res, next) => {
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];//bearer toke 
+    const token = authHeader && authHeader.split(' ')[1];//bearer token 
 
     if (token == null) return res.sendStatus(401);//pas de token
 

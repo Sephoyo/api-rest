@@ -28,14 +28,16 @@ db.exec(`
   )
 `);
 
-db.exec(`
-  INSERT INTO PRODUCT (nom, desc, price, categorie) VALUES
-    ('Clavier mécanique', 'Clavier mécanique sans fil', 7999, 'Informatique'),
-    ('Souris ergonomique', 'Souris sans fil avec capteur optique', 2999, 'Informatique'),
-    ('Casque audio', 'Casque audio Bluetooth', 5999, 'Audio'),
-    ('Sac à dos', 'Sac à dos imperméable pour ordinateur', 4499, 'Accessoires'),
-    ('Gourde inox', 'Gourde réutilisable de 750 ml', 1999, 'Maison');
-`);
+if (db.prepare("SELECT COUNT(*) AS n FROM PRODUCT").get().n === 0){
+    db.exec(`
+        INSERT INTO PRODUCT (nom, desc, price, categorie) VALUES
+            ('Clavier mécanique', 'Clavier mécanique sans fil', 7999, 'Informatique'),
+            ('Souris ergonomique', 'Souris sans fil avec capteur optique', 2999, 'Informatique'),
+            ('Casque audio', 'Casque audio Bluetooth', 5999, 'Audio'),
+            ('Sac à dos', 'Sac à dos imperméable pour ordinateur', 4499, 'Accessoires'),
+            ('Gourde inox', 'Gourde réutilisable de 750 ml', 1999, 'Maison');
+        `);
+}
 
 //Création de la table utilisateur
 db.exec(`
@@ -47,10 +49,12 @@ db.exec(`
   )
 `);
 
-db.exec(`
-  INSERT INTO USERS (nom, email, password) VALUES
-    ('John', 'john@doe.fr','password123');
-`);
+if (db.prepare("SELECT COUNT(*) AS n FROM PRODUCT").get().n === 0){
+    db.exec(`
+    INSERT INTO USERS (nom, email, password) VALUES
+        ('John', 'john@doe.fr','password123');
+    `);
+}
 
 
 app.get('/', (req, res) => {
