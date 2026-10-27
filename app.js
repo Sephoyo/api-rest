@@ -29,7 +29,8 @@ db.exec(`
     nom TEXT NOT NULL,
     desc TEXT NOT NULL,
     price INTEGER NOT NULL,
-    categorie TEXT NOT NULL
+    categorie TEXT NOT NULL,
+    created_by INTEGER
   )
 `);
 
@@ -50,15 +51,21 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     nom TEXT NOT NULL,
     email TEXT NOT NULL,
-    password INTEGER NOT NULL
+    password INTEGER NOT NULL,
+    role TEXT NOT NULL DEFAULT 'client'
   )
 `);
 
-if (db.prepare("SELECT COUNT(*) AS n FROM USERS").get().n === 0){
-    db.exec(`
-    INSERT INTO USERS (nom, email, password) VALUES
-        ('John', 'john@doe.fr','password123');
-    `);
+//Un utilisateur de test par rôle (client, manager, admin)
+const Users = [
+    { nom: 'John', email: 'john@doe.fr', password: 'password123', role: 'client' },
+    { nom: 'Manager', email: 'manager@doe.fr', password: 'password123', role: 'manager' },
+    { nom: 'Admin', email: 'admin@doe.fr', password: 'password123', role: 'admin' },
+];
+for (const user of Users) {
+    if (!db.prepare('SELECT id FROM USERS WHERE email=?').get(user.email)) {
+        db.prepare('INSERT INTO USERS (nom, email, password, role) VALUES (@nom, @email, @password, @role)').run(user);
+    }
 }
 
 

@@ -13,7 +13,7 @@ const UserRoute = (db, secretKey) => {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
-        const token = jwt.sign({ username: user.nom }, secretKey, { expiresIn: '5m' });
+        const token = jwt.sign({ id: user.id, username: user.nom, role: user.role }, secretKey, { expiresIn: '5m' });
         return res.status(200).json({ token });
     });
 

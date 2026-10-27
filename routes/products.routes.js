@@ -1,4 +1,5 @@
 const express = require('express');
+const authorizeRoles = require('../middleware/role.middleware');
 
 const ProductRoute = (db, authenticateToken) => {
     const router = express.Router();
@@ -21,19 +22,20 @@ const ProductRoute = (db, authenticateToken) => {
     });
 
     //Add product
-    router.post('/', authenticateToken, (req, res) => {
+    router.post('/', authenticateToken, authorizeRoles('manager', 'admin'), (req, res) => {
         const { nom, desc, price, categorie } = req.body;
 
         if (!nom || !desc || !price || !categorie) {
             return res.status(400).json({ message: 'Missing required fields' });
         }
 
-        const stmt = db.prepare("INSERT into PRODUCT (nom,desc,price,categorie) VALUES (@nom,@desc,@price,@categorie)")
+        const stmt = db.prepare("INSERT into PRODUCT (nom,desc,price,categorie,created_by) VALUES (@nom,@desc,@price,@categorie,@created_by)")
         const result = stmt.run({
             nom: nom,
             desc: desc,
             price: price,
             categorie: categorie,
+            created_by: req.user.id,
         });
 
         return res.status(201).json({
@@ -43,11 +45,16 @@ const ProductRoute = (db, authenticateToken) => {
     });
 
     //Patch product
-    router.patch('/:id', authenticateToken, (req,res)=>{
+    router.patch('/:id', authenticateToken, authorizeRoles('manager', 'admin'), (req,res)=>{
         const existingProduct = db.prepare('SELECT * FROM PRODUCT WHERE id=?').get(req.params.id);
 
         if (!existingProduct) {
             return res.status(404).json({ message: 'Product not found' });
+        }
+
+        //Un manager ne peut modifier que ses propres produits
+        if (req.user.role === 'manager' && existingProduct.created_by !== req.user.id) {
+            return res.status(403).json({ message: 'Access denied' });
         }
 
         const { nom, desc, price, categorie } = req.body;
@@ -69,7 +76,7 @@ const ProductRoute = (db, authenticateToken) => {
     });
 
     //Delete product
-    router.delete('/:id', authenticateToken, (req,res)=>{
+    router.delete('/:id', authenticateToken, authorizeRoles('admin'), (req,res)=>{
         const existingProduct = db.prepare('SELECT * FROM PRODUCT WHERE id=?').get(req.params.id);
 
         if (!existingProduct) {
